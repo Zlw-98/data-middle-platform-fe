@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Card, Select, Tree, Button, Space, Divider, Input, Table, Typography } from 'antd'
-import { PlusOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import { useState, useEffect } from 'react'
+import { Card, Select, Tree, Button, Space, Input, Table, Typography } from 'antd'
+import { PlusOutlined, DeleteOutlined, PlayCircleOutlined, DatabaseOutlined, FieldBinaryOutlined, FilterOutlined, TableOutlined } from '@ant-design/icons'
 import type { DataNode } from 'antd/es/tree'
 
 const { Title, Text } = Typography
@@ -89,6 +89,413 @@ const mockData: Record<string, MockRow[]> = {
   ],
 }
 
+const cssVariables = `
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg-primary: #0f1419;
+    --bg-secondary: #1a2332;
+    --bg-card: #1e2a3a;
+    --bg-card-hover: #243447;
+    --accent-primary: #f59e0b;
+    --accent-secondary: #fb923c;
+    --accent-glow: rgba(245, 158, 11, 0.15);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-subtle: rgba(148, 163, 184, 0.1);
+    --border-accent: rgba(245, 158, 11, 0.3);
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 40px rgba(245, 158, 11, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-primary);
+    font-family: 'Outfit', sans-serif;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .animate-slide-in {
+    animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  .query-builder-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    padding: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .query-builder-page::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, var(--accent-glow) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .page-header {
+    margin-bottom: 48px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .page-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+  }
+
+  .page-subtitle {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin: 0;
+    font-weight: 300;
+  }
+
+  .main-layout {
+    display: flex;
+    gap: 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .config-panel {
+    width: 380px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .result-panel {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .config-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .config-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-card), var(--shadow-glow);
+  }
+
+  .config-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .config-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .config-card-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .result-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .run-button {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    color: #0f1419;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .run-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+  }
+
+  .run-button:active {
+    transform: translateY(0);
+  }
+
+  .sql-preview {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .sql-preview-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+
+  .sql-preview-content {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
+  .table-section-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .data-table-wrapper {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state-text {
+    font-size: 15px;
+  }
+
+  .ant-select-selector {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-subtle) !important;
+    border-radius: 8px !important;
+  }
+
+  .ant-select-selection-item {
+    color: var(--text-primary) !important;
+  }
+
+  .ant-select-placeholder {
+    color: var(--text-muted) !important;
+  }
+
+  .ant-select-arrow {
+    color: var(--text-muted) !important;
+  }
+
+  .ant-tree {
+    background: transparent !important;
+    color: var(--text-secondary);
+  }
+
+  .ant-tree-node-content-wrapper {
+    color: var(--text-secondary) !important;
+  }
+
+  .ant-tree-node-content-wrapper:hover {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .ant-tree-checkbox-inner {
+    background: var(--bg-secondary) !important;
+    border-color: var(--text-muted) !important;
+  }
+
+  .ant-tree-checkbox-checked .ant-tree-checkbox-inner {
+    background: var(--accent-primary) !important;
+    border-color: var(--accent-primary) !important;
+  }
+
+  .ant-input {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-subtle) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+  }
+
+  .ant-input::placeholder {
+    color: var(--text-muted) !important;
+  }
+
+  .ant-input:hover, .ant-input:focus {
+    border-color: var(--accent-primary) !important;
+    box-shadow: 0 0 0 2px var(--accent-glow) !important;
+  }
+
+  .ant-input-textarea textarea {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .ant-btn-dashed {
+    background: var(--bg-secondary);
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: 8px;
+  }
+
+  .ant-btn-dashed:hover {
+    border-color: var(--accent-primary) !important;
+    color: var(--accent-primary) !important;
+  }
+
+  .ant-table {
+    background: transparent !important;
+  }
+
+  .ant-table-thead > tr > th {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    font-weight: 500;
+  }
+
+  .ant-table-tbody > tr > td {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+
+  .ant-table-tbody > tr:hover > td {
+    background: var(--bg-card-hover) !important;
+  }
+
+  .ant-pagination {
+    margin-top: 16px;
+  }
+
+  .ant-pagination-item {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-subtle) !important;
+  }
+
+  .ant-pagination-item a {
+    color: var(--text-secondary) !important;
+  }
+
+  .ant-pagination-item-active {
+    border-color: var(--accent-primary) !important;
+  }
+
+  .ant-pagination-item-active a {
+    color: var(--accent-primary) !important;
+  }
+`
+
 function TableSelector({
   value,
   onChange,
@@ -102,16 +509,22 @@ function TableSelector({
   }))
 
   return (
-    <Card title="1. 数据表选择" size="small">
+    <div className="config-card animate-slide-in delay-1">
+      <div className="config-card-header">
+        <div className="config-card-icon">
+          <DatabaseOutlined style={{ color: '#0f1419' }} />
+        </div>
+        <h3 className="config-card-title">数据表</h3>
+      </div>
       <Select
         mode="multiple"
-        placeholder="请选择数据表"
+        placeholder="选择数据表..."
         options={options}
         value={value}
         onChange={onChange}
         style={{ width: '100%' }}
       />
-    </Card>
+    </div>
   )
 }
 
@@ -121,8 +534,8 @@ function FieldSelector({
   onChange,
 }: {
   selectedTables: string[]
-  value: string[]
-  onChange: (value: string[]) => void
+  value: { table: string; field: string }[]
+  onChange: (value: { table: string; field: string }[]) => void
 }) {
   const treeData: DataNode[] = tables
     .filter((t) => selectedTables.includes(t.tableName))
@@ -147,9 +560,15 @@ function FieldSelector({
   }
 
   return (
-    <Card title="2. 字段选择" size="small">
+    <div className="config-card animate-slide-in delay-2">
+      <div className="config-card-header">
+        <div className="config-card-icon">
+          <FieldBinaryOutlined style={{ color: '#0f1419' }} />
+        </div>
+        <h3 className="config-card-title">字段</h3>
+      </div>
       {selectedTables.length === 0 ? (
-        <Text type="secondary">请先选择数据表</Text>
+        <Text style={{ color: 'var(--text-muted)' }}>请先选择数据表</Text>
       ) : (
         <Tree
           checkable
@@ -159,7 +578,7 @@ function FieldSelector({
           onCheck={handleCheck}
         />
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -202,36 +621,43 @@ function FilterConditions({
   }))
 
   return (
-    <Card
-      title="3. 筛选条件"
-      size="small"
-      extra={
-        <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={addCondition}>
-          添加条件
+    <div className="config-card animate-slide-in delay-3">
+      <div className="config-card-header">
+        <div className="config-card-icon">
+          <FilterOutlined style={{ color: '#0f1419' }} />
+        </div>
+        <h3 className="config-card-title">筛选</h3>
+        <Button
+          type="dashed"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={addCondition}
+          style={{ marginLeft: 'auto' }}
+        >
+          添加
         </Button>
-      }
-    >
+      </div>
       <Space direction="vertical" style={{ width: '100%' }} size="small">
-        {value.map((condition, index) => (
+        {value.map((condition) => (
           <Space key={condition.id}>
             <Select
               size="small"
-              style={{ width: 150 }}
+              style={{ width: 130 }}
               options={fieldOptions}
               value={condition.field}
               onChange={(v) => updateCondition(condition.id, v, condition.operator, condition.value)}
-              placeholder="选择字段"
+              placeholder="字段"
             />
             <Select
               size="small"
-              style={{ width: 80 }}
+              style={{ width: 70 }}
               options={operators}
               value={condition.operator}
               onChange={(v) => updateCondition(condition.id, condition.field, v, condition.value)}
             />
             <Input
               size="small"
-              style={{ width: 120 }}
+              style={{ width: 100 }}
               placeholder="值"
               value={condition.value}
               onChange={(e) =>
@@ -248,10 +674,12 @@ function FilterConditions({
           </Space>
         ))}
         {value.length === 0 && (
-          <Text type="secondary">点击上方按钮添加筛选条件</Text>
+          <Text style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+            点击按钮添加筛选条件
+          </Text>
         )}
       </Space>
-    </Card>
+    </div>
   )
 }
 
@@ -269,7 +697,7 @@ function ResultPanel({
   const [columns, setColumns] = useState<any[]>([])
   const [hasRun, setHasRun] = useState(false)
 
-  const buildTreeData = () => {
+  const buildSql = () => {
     const selectedTablesSet = new Set(selectedTables)
     const filteredTables = tables.filter((t) => selectedTablesSet.has(t.tableName))
 
@@ -298,7 +726,7 @@ function ResultPanel({
   }
 
   const handleRunQuery = () => {
-    const generatedSql = buildTreeData()
+    const generatedSql = buildSql()
     setSql(generatedSql)
     setHasRun(true)
 
@@ -344,49 +772,42 @@ function ResultPanel({
   }
 
   return (
-    <Card
-      title="查询结果"
-      size="small"
-      extra={
-        <Button
-          type="primary"
-          icon={<PlayCircleOutlined />}
-          onClick={handleRunQuery}
-        >
+    <div className="result-card animate-fade-in-up delay-2">
+      <div className="result-header">
+        <h2 className="result-title">
+          <TableOutlined />
+          查询结果
+        </h2>
+        <button className="run-button" onClick={handleRunQuery}>
+          <PlayCircleOutlined />
           生成查询
-        </Button>
-      }
-    >
-      <Space direction="vertical" style={{ width: '100%' }} size="middle">
-        <div>
-          <Text strong>SQL 预览：</Text>
-          <Input.TextArea
-            value={sql}
-            readOnly
-            rows={4}
-            style={{ marginTop: 8, fontFamily: 'monospace' }}
-            placeholder="点击「生成查询」查看 SQL"
+        </button>
+      </div>
+
+      <div className="sql-preview">
+        <div className="sql-preview-label">SQL 预览</div>
+        <pre className="sql-preview-content">
+          {sql || '点击「生成查询」查看 SQL 语句'}
+        </pre>
+      </div>
+
+      <span className="table-section-label">数据预览</span>
+      <div className="data-table-wrapper">
+        {hasRun ? (
+          <Table
+            columns={columns}
+            dataSource={data}
+            pagination={{ pageSize: 10 }}
+            size="small"
           />
-        </div>
-        <Divider style={{ margin: '12px 0' }} />
-        <div>
-          <Text strong>数据预览：</Text>
-          {hasRun ? (
-            <Table
-              columns={columns}
-              dataSource={data}
-              pagination={{ pageSize: 10 }}
-              style={{ marginTop: 8 }}
-              size="small"
-            />
-          ) : (
-            <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-              点击「生成查询」查看模拟结果
-            </Text>
-          )}
-        </div>
-      </Space>
-    </Card>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">⬡</div>
+            <div className="empty-state-text">配置查询条件后点击「生成查询」查看结果</div>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -401,32 +822,38 @@ export default function QueryBuilderPage() {
   }
 
   return (
-    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      <Title level={3} style={{ marginBottom: 24 }}>
-        数据中台组合查询
-      </Title>
-      <div style={{ display: 'flex', gap: 16 }}>
-        <div style={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <TableSelector value={selectedTables} onChange={setSelectedTables} />
-          <FieldSelector
-            selectedTables={selectedTables}
-            value={selectedFields}
-            onChange={handleFieldsChange}
-          />
-          <FilterConditions
-            selectedFields={selectedFields}
-            value={conditions}
-            onChange={setConditions}
-          />
-        </div>
-        <div style={{ width: '70%' }}>
-          <ResultPanel
-            selectedTables={selectedTables}
-            selectedFields={selectedFields}
-            conditions={conditions}
-          />
+    <>
+      <style>{cssVariables}</style>
+      <div className="query-builder-page">
+        <header className="page-header animate-fade-in-up">
+          <h1 className="page-title">数据中台组合查询</h1>
+          <p className="page-subtitle">可视化查询构建 · 简化版 BI 工具</p>
+        </header>
+
+        <div className="main-layout">
+          <aside className="config-panel">
+            <TableSelector value={selectedTables} onChange={setSelectedTables} />
+            <FieldSelector
+              selectedTables={selectedTables}
+              value={selectedFields}
+              onChange={handleFieldsChange}
+            />
+            <FilterConditions
+              selectedFields={selectedFields}
+              value={conditions}
+              onChange={setConditions}
+            />
+          </aside>
+
+          <main className="result-panel">
+            <ResultPanel
+              selectedTables={selectedTables}
+              selectedFields={selectedFields}
+              conditions={conditions}
+            />
+          </main>
         </div>
       </div>
-    </div>
+    </>
   )
 }
